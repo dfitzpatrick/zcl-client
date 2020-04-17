@@ -1,0 +1,81 @@
+{
+  "name": "zcl-client",
+  "productName": "zcl-client",
+  "version": "1.0.0",
+  "description": "My Electron application description",
+  "main": "dist/index.js",
+  "scripts": {
+    "start": "tsc && electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make",
+    "publish": "electron-forge publish",
+    "lint": "eslint --ext .ts ."
+  },
+  "keywords": [],
+  "author": {
+    "name": "Derek Fitzpatrick",
+    "email": "dfitz.murrieta@gmail.com"
+  },
+  "license": "MIT",
+  "config": {
+    "forge": {
+      "packagerConfig": {},
+      "makers": [
+        {
+          "name": "@electron-forge/maker-squirrel",
+          "config": {
+            "name": "zcl_client"
+          }
+        },
+        {
+          "name": "@electron-forge/maker-zip",
+          "platforms": [
+            "darwin"
+          ]
+        },
+        {
+          "name": "@electron-forge/maker-deb",
+          "config": {}
+        },
+        {
+          "name": "@electron-forge/maker-rpm",
+          "config": {}
+        }
+      ]
+    }
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^6.0.0-beta.49",
+    "@electron-forge/maker-deb": "^6.0.0-beta.49",
+    "@electron-forge/maker-rpm": "^6.0.0-beta.49",
+    "@electron-forge/maker-squirrel": "^6.0.0-beta.49",
+    "@electron-forge/maker-zip": "^6.0.0-beta.49",
+    "@typescript-eslint/eslint-plugin": "^2.19.2",
+    "@typescript-eslint/parser": "^2.19.2",
+    "electron": "8.0.1",
+    "eslint": "^6.8.0",
+    "eslint-plugin-import": "^2.20.1",
+    "typescript": "^3.7.5"
+  },
+  "dependencies": {
+    "@openid/appauth": "^1.2.6",
+    "@types/lodash": "^4.14.149",
+    "@types/node": "^12.12.6",
+    "@types/node-fetch": "^2.5.4",
+    "@types/xmldom": "^0.1.29",
+    "axios": "^0.19.2",
+    "bootswatch": "^4.4.1",
+    "chokidar": "^3.3.1",
+    "electron-squirrel-startup": "^1.0.0",
+    "findit": "^2.0.0",
+    "form-data": "^3.0.0",
+    "lodash": "^4.17.15",
+    "moment": "^2.24.0",
+    "node-fetch": "^2.6.0",
+    "nydus": "git+https://github.com/healingbrew/nydus.git",
+    "username": "^5.1.0",
+    "walk": "^2.3.14",
+    "xmldom": "^0.2.1",
+    "xpath": "0.0.27"
+  }
+}
