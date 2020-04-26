@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>ZCL Match Client</title>
+    <link rel="stylesheet" href="../../assets/css/slate.css">
+  </head>
+  <body>
+    <div class="card text-white bg-primary mb-3">
+        <div class="card-header">Confirm Starcraft II Directory</div>
+        <div class="card-body">
+          <h4 class="card-title">Please Confirm Your Starcraft II Directory</h4>
+          <p class="card-text" id="message"></p>
+          <div class="form-group">
+            
+            <button type="button" id="btnBrowse" class="btn btn-secondary">Browse</button>&nbsp;&nbsp;<span id="gamePath"></span>
+            <small id="fileHelp" class="form-text text-muted">Please confirm your Starcraft II Directory. This is usually found in /Users/<user>/Documents/Starcraft II</user></small>
+          </div>
+          <button type="button" id="btnContinue" class="btn btn-primary btn-lg">Continue</button>
+        </div>
+      </div>
+      
+
+  </body>
+  <script type="text/javascript">
+    require('../../../dist/pages/changeDirectory/changeDirectory.js')
+
+  </script>
+  
+</html>

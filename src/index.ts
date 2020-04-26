@@ -1,95 +1,221 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, webContents } from 'electron'
 import Settings from './settings'
 const fs = require('fs').promises
 
 import * as path from 'path'
 import Client from './objects'
-import {createAuthWindow} from './auth'
 import Axios from 'axios';
 import { createDetectWindow } from './detect'
+import { SSL_OP_EPHEMERAL_RSA } from 'constants'
 const fetch = require('node-fetch')
 const moment = require('moment')
-const remote = require('electron').remote
+const {remote, dialog} = require('electron')
 
 let scanningWindow
 
-async function directoryExists(directoryPath: string): Promise<boolean> {
-  try {
-    await fs.access(directoryPath)
-    return true
-  } catch (err) { return false }
+(<any>global).client = new Client()
+
+let client: Client
+let confirmWin: BrowserWindow
+let mainWin: BrowserWindow
+let loadingWin: BrowserWindow
+let authWin: BrowserWindow
+
+const sleep = (ms: number) => {
+  return new Promise(resolve => setTimeout(resolve, ms))
 }
-//const chokidar = require('chokidar');
-// Handle creating/removing shortcuts on Windows when installing/uninstalling.
+function destroyAuthWin() {
+  if (!authWin) return
+  authWin.close();
+  authWin = null;
+}
+
 if (require('electron-squirrel-startup')) { // eslint-disable-line global-require
   app.quit();
 }
-//var dpath = "c:/users/dfitz/onedrive/documents/Starcraft II"
-//chokidar.watch(dpath).on('all', (event: any, path: any) => {
-//  console.log(event, path);
-//});
-var dpath = "c:/users/dfitz/onedrive/documents/Starcraft II";
-export async function createMainWindow(c: Client) {
-  const gamePath = c.settings.get('gamePath')
-  try {
-    await fs.access(gamePath)
-  } catch (err) {
-    createDetectWindow(c)
-  }
-  await c.watch()
-  //c.linkSmurfs()
-  c.syncReplays()
+  export function createMainWindow() {
+  client.watch()
+  client.api.updateHeaders()
+  client.linkSmurfs()
+  client.syncReplays()
   
-
   const mainWindow = new BrowserWindow({
     height: 400,
     width: 500,
     webPreferences: {nodeIntegration: true}
   });
   mainWindow.loadFile(path.join(__dirname, '../src/index.html'));
-  return
+
+  mainWindow.on('closed', ():null => loadingWin = null)
+  return mainWindow
 }
 
- function  createScanningWindow(client: Client) {
-  let win = new BrowserWindow({
+ function  createScanningWindow() {
+  let loadingWin = new BrowserWindow({
     width: 400,
     height: 300,
     frame: false,
     transparent: true,
     resizable: false,
+    webPreferences: {
+      nodeIntegration: true
+    }
   })
-  win.loadFile(path.join(__dirname, '../src/detectPath.html'))
+  loadingWin.loadFile(path.join(__dirname, '../src/loading/loading.html'))
 
-  win.on('closed', ():null => win = null)
-  win.webContents.on('did-finish-load', async () => {
-    win.show()
-    
+  loadingWin.on('closed', ():null => loadingWin = null)
 
+  return loadingWin
+}
+function createConfirmPathDialog() {
+  let confirmWin = new BrowserWindow({
+    width: 500,
+    height: 400,
+    frame: true,
+    transparent: true,
+    resizable: true,
+    show: false,
+    webPreferences: {
+      nodeIntegration: true
+    }
   })
-  return win
+  return confirmWin
+}
+export function createAuthWindow() {
+  const url = "https://discordapp.com/api/oauth2/authorize"
+  const clientId = "485951338518282251"
+  const callbackUrl = 'http://localhost/'
+  const target = `${url}?response_type=token&client_id=${clientId}&scope=email&redirect_uri=${callbackUrl}`
+  destroyAuthWin()
+
+  authWin = new BrowserWindow({
+      width: 600,
+      height: 800,
+  });
+  authWin.loadURL(target)
+  const {session: {webRequest}} = authWin.webContents;
+
+  const filter = {
+      urls: [
+          "http://localhost/"
+      ]
+  }
+  webRequest.onBeforeRequest(filter, async ({url}) => {
+      const access_token = url.match(/\&(?:access_token)\=([\S\s]*?)\&/)[1]
+      console.log('discord access token: ' + access_token)
+      try {
+        const exchange = await client.api.exchangeToken(access_token)
+        client.settings.set('token', exchange.token)
+        client.settings.set('user', exchange.user)
+        client.settings.save()
+        await client.api.updateHeaders()
+        createMainWindow()
+        return destroyAuthWin()
+
+      } catch (err) {
+        dialog.showErrorBox("Could not successfully log in", "We could not log you in. You must log into our website before using this client. If you have, your credentials might have been suspended. Contact an admin on Discord")
+        app.quit()
+      }
+      
+  })
+
+  authWin.on('closed', () => {
+      authWin = null;
+    });
+  return authWin
 }
 
+async function updateLoadStatus(win: BrowserWindow, message: string) {
+  win.webContents.send('yourmom', {'status': message})
+  await sleep(500)
+}
 async function main() {
-  let scanningWindow:BrowserWindow
-  const c = new Client(dpath);
-  let gamePath = c.settings.get('gamePath')
- 
-  // if doesn't exist, automatically find it (existing methods need reworking)
+  const bankPath = path.normalize('c:/users/dfitz/onedrive/desktop/ZoneControlCE.SC2Bank')
+  client = new Client()
+  //client.settings.set('token', null)
+  //client.settings.set('gamePath', undefined)
+  //let fo = await fs.readFile(bankPath)  
+  //await client.api.uploadBank(fo)
+  //console.log('sent bank')
 
-  // present screen for user to confirm found path, or change it. Or say not found and have them input it.
+  const loadingWin = createScanningWindow()
+  confirmWin = createConfirmPathDialog()
 
-  // continue to authenticate.
+  client.settings.set('gamePath', undefined)
+  client.settings.set('token', null)
+  client.settings.save()
 
+  confirmWin.loadFile(path.join(__dirname, '../src/pages/changeDirectory/changeDirectory.html'))
+  loadingWin.webContents.on('did-finish-load', async () => {
+    loadingWin.show()
+    let gamePath = client.settings.get('gamePath')
+    client.path = gamePath
+    try {
+      await client.load()
+    } catch (err) {
+      await updateLoadStatus(loadingWin, "Scanning for SC2")
+      gamePath = await client.detectPath()
+      console.log(gamePath)
+      const status = gamePath === undefined ?  
+        "We could not find your game directory. Please manually choose it." 
+        : "We automatically detected your game directory below. Please confirm."
+      
+      confirmWin.webContents.send('updateStatus', {
+        status: status,
+        gamePath: gamePath,
+      })
+      confirmWin.show()
+      loadingWin.hide()
 
-  const authenticated = await c.authenticate()
-  if (authenticated === true) {
-    createMainWindow(c)
-  } else {
-    createAuthWindow(c)
-  }
-
+    }
+  })
 
 };
+
+async function authenticate() {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const authenticated = await client.authenticate()
+      if (authenticated) {
+        mainWin = createMainWindow()
+        resolve()
+      } else {
+        authWin = createAuthWindow()
+      }
+    } catch (err) {
+      authWin = createAuthWindow()
+      console.log("Could not authenticate properly")
+    }
+  })
+}
+
+ipcMain.on('browseDirectory', async (event) => {
+  const result = await dialog.showOpenDialog(confirmWin, {
+    properties: ['openDirectory']
+  })
+  if (!result.canceled) {
+    confirmWin.webContents.send('updateStatus', {
+      status: "Please confirm your chosen directory",
+      gamePath: result.filePaths[0]
+    })
+  }
+})
+
+ipcMain.on('confirmDirectory', async (event, gamePath) => {
+  client.path = gamePath
+  updateLoadStatus(loadingWin, "Mapping Accounts")
+  confirmWin.hide()
+  loadingWin.show()
+  try {
+    await client.load()
+  } catch (err) {
+    confirmWin.webContents.send('updateStatus', {
+      status: err,
+      gamePath: gamePath
+    })
+    confirmWin.show()
+  }
+})
 
 
 // This method will be called when Electron has finished

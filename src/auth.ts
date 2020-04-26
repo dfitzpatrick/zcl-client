@@ -29,18 +29,20 @@ export function createAuthWindow(c: Client) {
     }
     webRequest.onBeforeRequest(filter, async ({url}) => {
         const access_token = url.match(/\&(?:access_token)\=([\S\s]*?)\&/)[1]
+        console.log('discord access token: ' + access_token)
         const exchange = await c.api.exchangeToken(access_token)
         c.settings.set('token', exchange.token)
         c.settings.set('user', exchange.user)
         c.settings.save()
         await c.api.updateHeaders()
-        createMainWindow(c)
+        createMainWindow()
         return destroyAuthWin()
     })
 
     win.on('closed', () => {
         win = null;
       });
+    return win
 }
 module.exports = {
     createAuthWindow,

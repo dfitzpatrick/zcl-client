@@ -1,9 +1,9 @@
 import axios, { AxiosInstance } from 'axios'
 import Client from './objects'
-//const api_base = 'http://localhost:8000/api/'
-//const accounts_base = 'http://localhost:8000/accounts/'
-const api_base = 'https://zclweb.herokuapp.com/api/'
-const accounts_base = 'https://zclweb.herokuapp.com/accounts/'
+const api_base = 'http://localhost:8000/api/'
+const accounts_base = 'http://localhost:8000/accounts/'
+//const api_base = 'https://zclweb.herokuapp.com/api/'
+//const accounts_base = 'https://zclweb.herokuapp.com/accounts/'
 
 interface Replay {
     id: number,
@@ -89,14 +89,18 @@ export class Api {
             return config
         })      
     }
-    public updateHeaders() {
-        const token = this.client.settings.get('token')
+    public async updateHeaders() {
+        return new Promise((resolve, reject) => {
+            const token = this.client.settings.get('token')
         this.headers = {
             'Content-Type': 'application/json',
         }
         if (token !== null) {
             this.headers['Authorization'] = `Token ${token}`
         }
+        resolve()
+        })
+        
     }
     // ===================================
     // Account endpoint api calls
@@ -104,15 +108,20 @@ export class Api {
     public async exchangeToken(token: string) {
 
         const payload = {token: token}
-        try {
-            const response = await this.accounts.post('exchange', JSON.stringify(payload))
-            return response.data
-        } catch (err) {
-            console.log(err)
-        }
+        const response = await this.accounts.post('exchange', JSON.stringify(payload))
+        if ('error' in response.data) throw new Error(response.data)
+        return response.data
+     
+       
         
-        //if ('error' in response.data) throw new Error(response.data)
+   
         
+    }
+    public async me(): Promise<CurrentUser> {
+        const response = await this.accounts.get('me', {
+            headers: this.headers
+        })
+        return response.data
     }
     // ===================================
     // api endpoint api calls
@@ -121,18 +130,17 @@ export class Api {
         const response = await this.api.get('replays')
         return response.data
     }
-    public async me(): Promise<CurrentUser> {
-        const response = await this.api.get('current_user')
-        return response.data
-    }
+  
     public async addSmurf(profileId: string) {
         const user: User = this.client.settings.get('user')
         const payload = {id: profileId}
         const target = `users/${user.id}/toons`
         try {
-            await this.api.post(target, payload)
+            await this.api.post(target, payload, {
+                headers: this.headers
+            })
         } catch (err) {
-            console.log(err)
+            //console.log(err)
         }
         
     }
@@ -143,6 +151,16 @@ export class Api {
             'Content-Disposition': "raw; filename='temp'"
         }
         await this.api.post('replayupload', obj, { 
+                headers: headers
+            })
+    }
+    public async uploadBank(obj: Buffer) {
+        const headers = {
+            ...this.headers,
+            'Content-Type': 'application/octet-stream',
+            'Content-Disposition': "raw; filename='temp'"
+        }
+        await this.api.post('banks', obj, { 
                 headers: headers
             })
     }

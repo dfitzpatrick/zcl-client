@@ -149,66 +149,49 @@ class Client {
     gameEvents: GameEvents
     api: Api
 
-    constructor(path: string) {
-        this.path = path;
+    constructor() {
+        this.path = null
         this.settings = new Settings()
         this.api = new Api(this)
         this.gameEvents = new GameEvents(this)
-        var listeners = {
-            directories: (root: string, stats: any, next: any) => {
-                for (let stat of stats) {
-                    if (stat.type != 'directory')
-                        continue;
-                    var statspath: string = pathlib.normalize(root + pathlib.sep + stat.name);
-                    if (this._isAccountDir(statspath)) {
-                        this.profiles.push(new Profile(statspath))
-                    }
-                    if (this._isGameDir(statspath)) {
-                        this.games.push(new Game(statspath));
-                        
-                    }
-                }
-                next();
-                }
-            }
-
-        require('walk').walkSync(path, {listeners: listeners});
-
-        //this.linkSmurfs()
-        this.dispatcher()
-    }
-    public async findPath(): Promise<string> {
-        let userDir = ""
-        const user = await username()
-        if (process.platform === 'win32') {
-            userDir = 'c:/Users/' + user
-        } else if (process.platform === 'darwin') {
-            userDir = user + '/Library'
-        }
-        if (userDir === "") {
-            return ""
-        }
-        const listeners = {
-            directories: (root: string, stats: any, next: any) => {
-                for (let stat of stats) {
-                    if (stat.type != 'directory')
-                        continue
-                    const statspath = pathlib.normalize(root + pathlib.sep + stat.name);
-                    if (this._isAccountDir(statspath)) {
-                        const found = pathlib.normalize(
-                            pathlib.dirname(pathlib.dirname(pathlib.dirname(statspath)))
-                        )
-                        this.settings.set('gamePath', found)
-                }
-            }
-            next();
-        }
         
-        
-     
     }
-    require('walk').walkSync(userDir, {listeners: listeners})
-}
+    public async load() {
+        const path = this.path
+        return new Promise((resolve, reject) => {
+            var listeners = {
+                directories: (root: string, stats: any, next: any) => {
+                    for (let stat of stats) {
+                        if (stat.type != 'directory')
+                            continue;
+                        var statspath: string = pathlib.normalize(root + pathlib.sep + stat.name);
+                        if (this._isAccountDir(statspath)) {
+                            this.profiles.push(new Profile(statspath))
+                        }
+                        if (this._isGameDir(statspath)) {
+                            this.games.push(new Game(statspath));
+                            
+                        }
+                    }
+                    next();
+                    }
+                }
+    
+            try {
+                require('walk').walkSync(path, {listeners: listeners});
+                if (this.profiles.length <= 0) {
+                    reject("No profiles detected")
+                }
+                console.log('done')
+                this.dispatcher()
+                  resolve(this)
+            } catch (err) {
+                reject(err)
+            }
+        })       
+        
+    }
+
     private _isGameDir(path: string) {
         return folderUpName(path).toLowerCase() == "banks";
     }
@@ -246,33 +229,33 @@ class Client {
         let root = ""
         const user = await username()
         if (process.platform === 'win32') {
-            root = '/Users/' + user
+            root = 'c:/Users/' + user
         } else if (process.platform === 'darwin') {
             root = user + '/Library'
         }
         if (root === "") {
             return ""
         }
-        var finder = require('findit')(root)
-
-        finder.on('directory', async (dir: any) => {
-            if (this._isAccountDir(dir)) {
-                const found = pathlib.normalize(
-                    pathlib.dirname(pathlib.dirname(pathlib.dirname(dir)))
-                )
-                finder.stop()
-                console.log(found)
-                try {
-                    await fs.access(found)
-                    return found
-                } catch (err) { 
-                    return "" 
+        return new Promise((resolve, reject) => {
+            var finder = require('findit')(root)
+            finder.on('directory', async (dir: any) => {
+                if (this._isAccountDir(dir)) {
+                    const found = pathlib.normalize(
+                        pathlib.dirname(pathlib.dirname(pathlib.dirname(dir)))
+                    )
+                    finder.stop()
+                    resolve(found)
                 }
-            }
+            })
+            finder.on('error', (err: any) => {
+                
+            })
+            finder.on('end', () => {
+                resolve(undefined)
+            })
+
         })
-        finder.on('error', (err: any) => {
-        })
-        return ""
+        
     }
     public async dispatcher() {
         // Dispatches events in the queue to the API
@@ -329,11 +312,12 @@ class Client {
         console.log('token is: ' + token)
         if (token !== null) {
             try {
+                await this.api.updateHeaders()
                 const user = await this.api.me()
                 this.settings.set('user', user)
                 this.settings.save()
                 console.log('user authorized: ' + user.authorized)
-                return user.authorized
+                return true
             } catch (err) {
                 //To do. User is not authorized for this app due to either
                 // 1. Unverified account
