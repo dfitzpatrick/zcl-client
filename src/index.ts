@@ -105,6 +105,7 @@ export function createAuthWindow() {
       console.log('discord access token: ' + access_token)
       try {
         const exchange = await client.api.exchangeToken(access_token)
+        client.settings.set('gamePath', undefined)
         client.settings.set('token', exchange.token)
         client.settings.set('user', exchange.user)
         client.settings.save()
@@ -142,7 +143,10 @@ async function main() {
   //await client.api.uploadBank(fo)
   //console.log('sent bank')
   let gamePath = client.settings.get('gamePath')
-  client.path = gamePath
+  if (gamePath !== undefined) {
+    client.path = gamePath
+  }
+
   try {
     await load()
   } catch (err) {

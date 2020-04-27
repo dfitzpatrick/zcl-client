@@ -157,7 +157,7 @@ class Client {
     api: Api
 
     constructor() {
-        this.path = null
+        this.path = ""
         this.settings = new Settings()
         this.api = new Api(this)
         this.gameEvents = new GameEvents(this)
@@ -168,6 +168,9 @@ class Client {
     }
     public async load() {
         return new Promise(async (resolve, reject) => {
+            if (this.path === "") {
+                reject(this)
+            }
             var finder = require('findit')(this.path)
             finder.on('directory', async (dir: any) => {
                 if (this._isAccountDir(dir)) {
@@ -182,7 +185,7 @@ class Client {
             })
             finder.on('end', () => {
                 if (this.profiles.length <= 0) {
-                    reject(undefined)
+                    reject(this)
                     return
                 }
                 this.dispatcher()
