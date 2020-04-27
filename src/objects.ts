@@ -168,7 +168,8 @@ class Client {
     }
     public async load() {
         return new Promise(async (resolve, reject) => {
-            if (this.path === "") {
+            console.log('path is set as: ' + this.path)
+            if (typeof this.path !== "string") {
                 reject(this)
             }
             var finder = require('findit')(this.path)
