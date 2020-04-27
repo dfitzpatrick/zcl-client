@@ -1,9 +1,20 @@
 import axios, { AxiosInstance } from 'axios'
 import Client from './objects'
-const api_base = 'http://localhost:8000/api/'
-const accounts_base = 'http://localhost:8000/accounts/'
-//const api_base = 'https://zclweb.herokuapp.com/api/'
-//const accounts_base = 'https://zclweb.herokuapp.com/accounts/'
+
+const local = false
+console.log("Local API Set to: " + local)
+let api_base: string
+let accounts_base: string
+if (local) {
+     api_base = 'http://localhost:8000/api/'
+     accounts_base = 'http://localhost:8000/accounts/'
+} else {
+    api_base = 'https://zclweb.herokuapp.com/api/'
+    accounts_base = 'https://zclweb.herokuapp.com/accounts/'
+}
+
+    
+
 
 interface Replay {
     id: number,
@@ -163,6 +174,13 @@ export class Api {
         await this.api.post('banks', obj, { 
                 headers: headers
             })
+    }
+    public async matchStart(payload: any) {
+        const response = await this.api.post('automatch', {
+            data: payload,
+            headers: this.headers
+        })
+        return response.data
     }
 
 }

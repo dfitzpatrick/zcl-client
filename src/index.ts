@@ -1,25 +1,20 @@
-import { app, BrowserWindow, ipcMain, webContents } from 'electron'
-import Settings from './settings'
+import { app, BrowserWindow, ipcMain, webContents, Menu, Tray} from 'electron'
 const fs = require('fs').promises
-
 import * as path from 'path'
 import Client from './objects'
-import Axios from 'axios';
-import { createDetectWindow } from './detect'
-import { SSL_OP_EPHEMERAL_RSA } from 'constants'
-const fetch = require('node-fetch')
-const moment = require('moment')
-const {remote, dialog} = require('electron')
-
-let scanningWindow
-
-(<any>global).client = new Client()
+const {dialog} = require('electron')
+require('update-electron-app')()
 
 let client: Client
 let confirmWin: BrowserWindow
 let mainWin: BrowserWindow
 let loadingWin: BrowserWindow
 let authWin: BrowserWindow
+let resolveLoad: any
+let resolveAuth: any
+let tray: Tray
+Menu.setApplicationMenu(null)
+
 
 const sleep = (ms: number) => {
   return new Promise(resolve => setTimeout(resolve, ms))
@@ -34,19 +29,17 @@ if (require('electron-squirrel-startup')) { // eslint-disable-line global-requir
   app.quit();
 }
   export function createMainWindow() {
-  client.watch()
-  client.api.updateHeaders()
-  client.linkSmurfs()
-  client.syncReplays()
   
-  const mainWindow = new BrowserWindow({
+  
+  let mainWindow = new BrowserWindow({
     height: 400,
     width: 500,
+    maximizable: false,
     webPreferences: {nodeIntegration: true}
   });
   mainWindow.loadFile(path.join(__dirname, '../src/index.html'));
 
-  mainWindow.on('closed', ():null => loadingWin = null)
+  mainWindow.on('closed', () => app.quit())
   return mainWindow
 }
 
@@ -55,13 +48,13 @@ if (require('electron-squirrel-startup')) { // eslint-disable-line global-requir
     width: 400,
     height: 300,
     frame: false,
-    transparent: true,
+    transparent: false,
     resizable: false,
     webPreferences: {
       nodeIntegration: true
     }
   })
-  loadingWin.loadFile(path.join(__dirname, '../src/loading/loading.html'))
+  loadingWin.loadFile(path.join(__dirname, '../src/pages/loading/loading.html'))
 
   loadingWin.on('closed', ():null => loadingWin = null)
 
@@ -73,7 +66,8 @@ function createConfirmPathDialog() {
     height: 400,
     frame: true,
     transparent: true,
-    resizable: true,
+    resizable: false,
+    maximizable: false,
     show: false,
     webPreferences: {
       nodeIntegration: true
@@ -101,6 +95,12 @@ export function createAuthWindow() {
       ]
   }
   webRequest.onBeforeRequest(filter, async ({url}) => {
+    console.log('url is')
+    console.log(url)
+    if (url.startsWith('http://localhost/#error')) {
+      app.quit()
+      return
+    }
       const access_token = url.match(/\&(?:access_token)\=([\S\s]*?)\&/)[1]
       console.log('discord access token: ' + access_token)
       try {
@@ -109,8 +109,11 @@ export function createAuthWindow() {
         client.settings.set('user', exchange.user)
         client.settings.save()
         await client.api.updateHeaders()
+    
         createMainWindow()
+        resolveAuth()
         return destroyAuthWin()
+        
 
       } catch (err) {
         dialog.showErrorBox("Could not successfully log in", "We could not log you in. You must log into our website before using this client. If you have, your credentials might have been suspended. Contact an admin on Discord")
@@ -120,60 +123,109 @@ export function createAuthWindow() {
   })
 
   authWin.on('closed', () => {
+    console.log('closing auth win')
       authWin = null;
     });
   return authWin
 }
 
 async function updateLoadStatus(win: BrowserWindow, message: string) {
-  win.webContents.send('yourmom', {'status': message})
+  win.webContents.send('loading-update', {'status': message})
   await sleep(500)
 }
 async function main() {
-  const bankPath = path.normalize('c:/users/dfitz/onedrive/desktop/ZoneControlCE.SC2Bank')
   client = new Client()
   //client.settings.set('token', null)
+  //client.settings.save()
   //client.settings.set('gamePath', undefined)
   //let fo = await fs.readFile(bankPath)  
   //await client.api.uploadBank(fo)
   //console.log('sent bank')
+  let gamePath = client.settings.get('gamePath')
+  client.path = gamePath
+  try {
+    await load()
+  } catch (err) {
+    console.log('error')
+  }
+  await authenticate()
+  console.log('continuing after auth')
+  client.linkSmurfs()
+  client.syncReplays()
+  console.log('starting watcher in ' + client.path)
+  await client.watch()
 
-  const loadingWin = createScanningWindow()
-  confirmWin = createConfirmPathDialog()
-
-  client.settings.set('gamePath', undefined)
-  client.settings.set('token', null)
-  client.settings.save()
-
-  confirmWin.loadFile(path.join(__dirname, '../src/pages/changeDirectory/changeDirectory.html'))
-  loadingWin.webContents.on('did-finish-load', async () => {
-    loadingWin.show()
-    let gamePath = client.settings.get('gamePath')
-    client.path = gamePath
-    try {
-      await client.load()
-    } catch (err) {
-      await updateLoadStatus(loadingWin, "Scanning for SC2")
-      gamePath = await client.detectPath()
-      console.log(gamePath)
-      const status = gamePath === undefined ?  
-        "We could not find your game directory. Please manually choose it." 
-        : "We automatically detected your game directory below. Please confirm."
-      
-      confirmWin.webContents.send('updateStatus', {
-        status: status,
-        gamePath: gamePath,
-      })
-      confirmWin.show()
-      loadingWin.hide()
-
-    }
-  })
+  console.log('loaded')
 
 };
+async function load(scan=true) {
+  return new Promise((resolve, reject) => {
 
+    const loadingWin = createScanningWindow()
+    confirmWin = createConfirmPathDialog()
+    let shouldScan = scan
+    let status
+    confirmWin.loadFile(path.join(__dirname, '../src/pages/changeDirectory/changeDirectory.html'))
+    loadingWin.webContents.on('did-finish-load', async () => {
+      loadingWin.show()
+      while (true) {
+        console.log('in loop to load')
+        let gamePath = client.settings.get('gamePath')
+        client.path = gamePath
+        try {
+          console.log('loading')
+          const loaded = await client.load()
+          if (loaded) {
+            loadingWin.close()
+            resolve()
+            break
+          }
+        } catch (err) {
+          try {
+            if (shouldScan) {
+              await updateLoadStatus(loadingWin, "Loading Objects")
+              gamePath = await client.detectPath()
+              shouldScan = false
+  
+              status = gamePath === undefined ?  
+              "We could not find your game directory. Please manually choose it." 
+              : "We automatically detected your game directory below. Please confirm."
+    
+            } else {
+              status = "That directory is not valid. Please choose another"
+            }
+            
+            await confirmGamePath(status, gamePath)
+
+
+          } catch (err) {
+            console.log('wtf error')
+          }
+          
+  
+        }
+      }
+    })
+
+  })
+ 
+ }
+    
+async function confirmGamePath(status: string, gamePath:string ) {
+  return new Promise((resolve, reject) => {
+    resolveLoad = resolve
+    confirmWin.webContents.send('updateStatus', {
+      status: status,
+      gamePath: gamePath,
+    })
+    confirmWin.show()
+    //loadingWin.hide()
+
+  })
+}
 async function authenticate() {
   return new Promise(async (resolve, reject) => {
+    resolveAuth = resolve
     try {
       const authenticated = await client.authenticate()
       if (authenticated) {
@@ -202,26 +254,26 @@ ipcMain.on('browseDirectory', async (event) => {
 })
 
 ipcMain.on('confirmDirectory', async (event, gamePath) => {
-  client.path = gamePath
-  updateLoadStatus(loadingWin, "Mapping Accounts")
+  client.settings.set('gamePath', gamePath)
+  client.settings.save()
+  //updateLoadStatus(loadingWin, "Mapping Accounts")
   confirmWin.hide()
-  loadingWin.show()
-  try {
-    await client.load()
-  } catch (err) {
-    confirmWin.webContents.send('updateStatus', {
-      status: err,
-      gamePath: gamePath
-    })
-    confirmWin.show()
-  }
+  resolveLoad(gamePath)
 })
 
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.on('ready', main);
+app.on('ready', () => {
+  let tray = new Tray(path.join(__dirname, '../', 'src', 'assets', 'img', 'zcl.ico'))
+  const contextMenu = Menu.buildFromTemplate([
+    { label: 'Quit'},
+  ])
+  tray.setContextMenu(contextMenu)
+  main()
+
+});
 
 // Quit when all windows are closed.
 app.on('window-all-closed', () => {

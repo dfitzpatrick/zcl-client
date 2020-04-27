@@ -1,16 +1,11 @@
 import pathlib = require('path')
-import Client from '../objects'
 const ipc = require('electron').ipcRenderer
 const remote = require('electron').remote
 
-const client: Client = remote.getGlobal('client')
-console.log('here')
-const username = require('username')
 
 const message = document.getElementById('message')
-let gamePath = client.settings.get('gamePath')
 
-ipc.on('yourmom', (event: any, messages: any) => {
+ipc.on('loading-update', (event: any, messages: any) => {
     console.log(event)
     console.log(messages)
     message.innerHTML = messages.status

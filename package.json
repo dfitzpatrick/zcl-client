@@ -1,9 +1,10 @@
 {
   "name": "zcl-client",
   "productName": "zcl-client",
-  "version": "1.0.0",
-  "description": "My Electron application description",
+  "version": "0.0.1",
+  "description": "Client to monitor games for Zone Control CE",
   "main": "dist/index.js",
+  "repository": "https://github.com/dfitzpatrick/zcl-client",
   "scripts": {
     "start": "tsc && electron-forge start",
     "package": "electron-forge package",
@@ -20,6 +21,18 @@
   "config": {
     "forge": {
       "packagerConfig": {},
+      "publishers": [
+        {
+          "name": "@electron-forge/publisher-github",
+          "config": {
+            "repository": {
+              "owner": "Derek Fitzpatrick",
+              "name": "zcl-client"
+            },
+            "prerelease": true
+         }
+        }
+      ],
       "makers": [
         {
           "name": "@electron-forge/maker-squirrel",
@@ -73,6 +86,7 @@
     "moment": "^2.24.0",
     "node-fetch": "^2.6.0",
     "nydus": "git+https://github.com/healingbrew/nydus.git",
+    "update-electron-app": "^1.5.0",
     "username": "^5.1.0",
     "walk": "^2.3.14",
     "xmldom": "^0.2.1",

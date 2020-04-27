@@ -29,8 +29,13 @@ export const directoryExists = async (path: string) => {
         return false
     }
 }
+
 interface Event {
     type: string;
+}
+export interface EventPayload {
+    game: Game,
+    event: Event
 }
 async function sleep(ms: any) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -107,6 +112,7 @@ class Profile {
 class Game {
     path: string;
     eventFile: string;
+    bankFile: string;
     id: string;
     tracked: boolean;
     profile: Profile
@@ -116,6 +122,7 @@ class Game {
         this.path = path;
         this.id = path.substring(path.lastIndexOf(pathlib.sep)+1);
         this.eventFile = pathlib.normalize(this.path + pathlib.sep + 'Events.SC2Bank')
+        this.bankFile = pathlib.normalize(this.path + pathlib.sep + 'ZoneControlCE.SC2Bank')
         this.tracked = TRACKED_GAMES.includes(this.id);
         this.profile = new Profile(pathlib.dirname(this.path))
         this.profileId = folderUpName(pathlib.dirname(this.path));
@@ -142,7 +149,7 @@ class Client {
     path: string;
     games: Game[] = [];
     profiles: Profile[] = []
-    queue: AsyncQueue<Event> = new AsyncQueue();
+    queue: AsyncQueue<EventPayload> = new AsyncQueue();
     chokidar: Object;
     eventCache: EventCache<Event> = new EventCache<Event>(); // To keep out duplicates
     settings: Settings
@@ -156,41 +163,35 @@ class Client {
         this.gameEvents = new GameEvents(this)
         
     }
-    public async load() {
-        const path = this.path
-        return new Promise((resolve, reject) => {
-            var listeners = {
-                directories: (root: string, stats: any, next: any) => {
-                    for (let stat of stats) {
-                        if (stat.type != 'directory')
-                            continue;
-                        var statspath: string = pathlib.normalize(root + pathlib.sep + stat.name);
-                        if (this._isAccountDir(statspath)) {
-                            this.profiles.push(new Profile(statspath))
-                        }
-                        if (this._isGameDir(statspath)) {
-                            this.games.push(new Game(statspath));
-                            
-                        }
-                    }
-                    next();
-                    }
-                }
-    
-            try {
-                require('walk').walkSync(path, {listeners: listeners});
-                if (this.profiles.length <= 0) {
-                    reject("No profiles detected")
-                }
-                console.log('done')
-                this.dispatcher()
-                  resolve(this)
-            } catch (err) {
-                reject(err)
-            }
-        })       
-        
+    public async sleep(ms: number) {
+        return new Promise(resolve => setTimeout(resolve, ms))
     }
+    public async load() {
+        return new Promise(async (resolve, reject) => {
+            var finder = require('findit')(this.path)
+            finder.on('directory', async (dir: any) => {
+                if (this._isAccountDir(dir)) {
+                    this.profiles.push(new Profile(dir))
+                }
+                if (this._isGameDir(dir)) {
+                    this.games.push(new Game(dir));
+                }
+            })
+            finder.on('error', (err: any) => {
+                
+            })
+            finder.on('end', () => {
+                if (this.profiles.length <= 0) {
+                    reject(undefined)
+                    return
+                }
+                this.dispatcher()
+                resolve(this)
+            })
+
+        })
+    }
+
 
     private _isGameDir(path: string) {
         return folderUpName(path).toLowerCase() == "banks";
@@ -259,26 +260,22 @@ class Client {
     }
     public async dispatcher() {
         // Dispatches events in the queue to the API
-        const actions: any = {
-            match_start: matchStart,
-            player_leave: playerLeave,
-        }
         while (true) {
             var item = await this.queue.dequeue();
             
-            if (this.eventCache.containsEvent(item)) {
+            if (this.eventCache.containsEvent(item.event)) {
                 // TODO: Fix this madness. This is an expensive
                 // bruteforce way to compare two JSON objects.
                 // This is because most watchers duplicate change events.
                 continue;
             }            
             try { 
-                await this.gameEvents[item.type](item)
+                await this.gameEvents[item.event.type](item)
             } catch (err) {
                 await this.gameEvents['on_error'](item)
             }
                 //actions[item.type](item);
-            this.eventCache.add(item);
+            this.eventCache.add(item.event);
 
         }   
     }
@@ -292,16 +289,22 @@ class Client {
         );
         watcher
         .on('change', async (path: string) => {
-            var game = this.gameFromEventPath(path);
+            console.log('detected change')
+            const game = this.gameFromEventPath(path);
             if (game) {
-                this.queue.enqueue(await game.lastEvent());
+                const event = await game.lastEvent()
+                const payload: EventPayload = {
+                    game: game,
+                    event: event,
+                }
+                this.queue.enqueue(payload);
             }
         })
         .on('add', (path: string) => {
             
             if (folderUpName(path).toLowerCase() == 'multiplayer') {
                 // ignore multiple adds for a replay as the file is still being generated.
-                _.debounce(this.newReplay, 5000)(path);
+                _.debounce(this.newReplay.bind(this), 5000)(path);
             }
         });
 
@@ -329,9 +332,11 @@ class Client {
         return false
     }
     public async newReplay(path: string) {
+        console.log('New replay ' + path)
+        //console.log(this.api)
         let fo = await fs.readFile(path)
-    
         await this.api.uploadReplay(fo)
+    
         let localManifest = this.settings.get('localManifest')
         localManifest.push(path)
         this.settings.set('localManifest', localManifest)
@@ -364,22 +369,5 @@ class Client {
     }
 }
 
-const matchStart = async (payload: any) => {
-    fetch('http://localhost:8000/api/automatch/', {
-        headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'Authorization': 'Token 51dea4eb6dfead2ce65ec88e8efbdb90cd134be1',
-          },    
-        method: 'post',
-        body: JSON.stringify(payload),
-    }).then((res: any) => {
-        console.log('api result: ' + res.status)
-    })
-    }
-
-const playerLeave = (payload: Event) => {
-    return;
-}
 
 export default Client;
