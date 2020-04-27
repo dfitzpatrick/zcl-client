@@ -2,6 +2,14 @@ import electron = require('electron')
 import path = require('path')
 import fs = require('fs')
 
+interface SettingsData {
+    gamePath: string,
+    localManifest: [],
+    token: string,
+    user: any
+
+}
+
 class Settings {
     userDataPath: string
     settingsFile: string
@@ -11,6 +19,17 @@ class Settings {
     constructor() {
         this.userDataPath = (electron.app || electron.remote.app).getPath("userData")
         this.settingsFile = path.join(this. userDataPath, 'zclclient.json')
+        if (!fs.existsSync(this.settingsFile)) { 
+            const defaultSettings: SettingsData = {
+                gamePath: "",
+                localManifest: [],
+                token: null,
+                user: {},
+            }
+            this.data = defaultSettings
+            this.save()
+
+        }
         this.data = this.readFile()
 
     }

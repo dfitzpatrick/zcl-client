@@ -171,6 +171,7 @@ class Client {
             console.log('path is set as: ' + this.path)
             if (typeof this.path !== "string") {
                 reject(this)
+                return
             }
             var finder = require('findit')(this.path)
             finder.on('directory', async (dir: any) => {
