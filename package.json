@@ -1,7 +1,7 @@
 {
   "name": "zcl-client",
   "productName": "zcl-client",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Client to monitor games for Zone Control CE",
   "main": "dist/index.js",
   "repository": "https://github.com/dfitzpatrick/zcl-client",
