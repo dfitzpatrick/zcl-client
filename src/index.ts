@@ -105,7 +105,7 @@ export function createAuthWindow() {
       console.log('discord access token: ' + access_token)
       try {
         const exchange = await client.api.exchangeToken(access_token)
-        client.settings.set('gamePath', undefined)
+        //client.settings.set('gamePath', undefined)
         client.settings.set('token', exchange.token)
         client.settings.set('user', exchange.user)
         client.settings.save()
@@ -136,14 +136,9 @@ async function updateLoadStatus(win: BrowserWindow, message: string) {
 }
 async function main() {
   client = new Client()
-  //client.settings.set('token', null)
-  //client.settings.save()
-  //client.settings.set('gamePath', undefined)
-  //let fo = await fs.readFile(bankPath)  
-  //await client.api.uploadBank(fo)
-  //console.log('sent bank')
+
   let gamePath = client.settings.get('gamePath')
-  if (gamePath !== undefined) {
+  if (gamePath !== "") {
     client.path = gamePath
   }
 
@@ -153,7 +148,11 @@ async function main() {
     console.log('error')
   }
   await authenticate()
-  console.log('continuing after auth')
+  for (const game of client.games) {
+    if (!game.tracked) { continue }
+    let fo = await fs.readFile(game.bankFile)
+        await client.api.uploadBank(fo)
+  }
   client.linkSmurfs()
   client.syncReplays()
   console.log('starting watcher in ' + client.path)

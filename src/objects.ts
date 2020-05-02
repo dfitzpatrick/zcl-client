@@ -354,7 +354,7 @@ class Client {
 
             //return
             let files = await fs.readdir(p.replayDir)
-            for (const f of files) {
+            for (const f of files.reverse()) {
                 
                 let replayPath = pathlib.join(p.replayDir, f)
                 if (localManifest.includes(replayPath.toString())) {
@@ -366,7 +366,7 @@ class Client {
                 // Parse the replay and send it to the server
                 console.log(replayPath)
                 await this.newReplay(replayPath)
-                await sleep(5000)
+                await sleep(1000)
             }
 
         }

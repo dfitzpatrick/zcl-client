@@ -9,8 +9,8 @@ if (local) {
      api_base = 'http://localhost:8000/api/'
      accounts_base = 'http://localhost:8000/accounts/'
 } else {
-    api_base = 'https://zclweb.herokuapp.com/api/'
-    accounts_base = 'https://zclweb.herokuapp.com/accounts/'
+    api_base = 'http://zclbeta.com/api/'
+    accounts_base = 'http://zclbeta.com/accounts/'
 }
 
     
