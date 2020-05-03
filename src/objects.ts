@@ -277,7 +277,8 @@ class Client {
             try { 
                 await this.gameEvents[item.event.type](item)
             } catch (err) {
-                await this.gameEvents['on_error'](item)
+                // Generic handler
+                await this.gameEvents['on_event'](item)
             }
                 //actions[item.type](item);
             this.eventCache.add(item.event);
@@ -365,8 +366,16 @@ class Client {
                 }   
                 // Parse the replay and send it to the server
                 console.log(replayPath)
-                await this.newReplay(replayPath)
-                await sleep(1000)
+                try {
+                    await this.newReplay(replayPath)
+                    await sleep(1000)
+                } catch(err) {
+                    //todo: Logging
+                    // The server may have gone down for a reset, or somehow was unreachable.
+                    await sleep(10000)
+                    this.syncReplays()
+                }
+                
             }
 
         }

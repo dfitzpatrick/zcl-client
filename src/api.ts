@@ -175,11 +175,21 @@ export class Api {
                 headers: headers
             })
     }
+    
     public async matchStart(payload: any) {
         const response = await this.api.post('automatch', {
             data: payload,
             headers: this.headers
         })
+        return response.data
+    }
+    public async genericEvent(payload: any) {
+        console.log('in generic event')
+        const response = await this.api.post('event', {
+            data: payload,
+            headers: this.headers
+        })
+        console.log(response.status)
         return response.data
     }
 
