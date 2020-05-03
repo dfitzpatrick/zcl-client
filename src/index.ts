@@ -30,16 +30,22 @@ if (require('electron-squirrel-startup')) { // eslint-disable-line global-requir
 }
   export function createMainWindow() {
   
-  
+  const version = app.getVersion()
   let mainWindow = new BrowserWindow({
     height: 400,
     width: 500,
     maximizable: false,
     webPreferences: {nodeIntegration: true}
   });
-  mainWindow.loadFile(path.join(__dirname, '../src/index.html'));
+  mainWindow.loadFile(path.join(__dirname, '../src/pages/main/main.html'));
 
-  mainWindow.on('closed', () => app.quit())
+  mainWindow.webContents.on('did-finish-load', async () => {
+    console.log('sending version')
+    mainWindow.webContents.send('version', {
+      version: app.getVersion()
+    })
+
+  })
   return mainWindow
 }
 
@@ -97,6 +103,7 @@ export function createAuthWindow() {
   webRequest.onBeforeRequest(filter, async ({url}) => {
     console.log('url is')
     console.log(url)
+    var window
     if (url.startsWith('http://localhost/#error')) {
       app.quit()
       return
@@ -111,9 +118,10 @@ export function createAuthWindow() {
         client.settings.save()
         await client.api.updateHeaders()
     
-        createMainWindow()
+        window = createMainWindow()
         resolveAuth()
-        return destroyAuthWin()
+        destroyAuthWin()
+        return window
         
 
       } catch (err) {
@@ -136,6 +144,10 @@ async function updateLoadStatus(win: BrowserWindow, message: string) {
 }
 async function main() {
   client = new Client()
+  //client.settings.set('token', null)
+  //client.settings.set('gamePath', "")
+  //client.settings.save()
+
 
   let gamePath = client.settings.get('gamePath')
   if (gamePath !== "") {
@@ -147,7 +159,7 @@ async function main() {
   } catch (err) {
     console.log('error')
   }
-  await authenticate()
+ await authenticate()
   for (const game of client.games) {
     if (!game.tracked) { continue }
     let fo = await fs.readFile(game.bankFile)
@@ -159,6 +171,7 @@ async function main() {
   await client.watch()
 
   console.log('loaded')
+
 
 };
 async function load(scan=true) {
@@ -232,8 +245,10 @@ async function authenticate() {
     try {
       const authenticated = await client.authenticate()
       if (authenticated) {
+        const version = app.getVersion()
         mainWin = createMainWindow()
         resolve()
+        return mainWin
       } else {
         authWin = createAuthWindow()
       }
