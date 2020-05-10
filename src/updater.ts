@@ -25,12 +25,12 @@ module.exports = function updater (opts: any = {}) {
   // check for bad input early, so it will be logged during development
   opts = validateInput(opts)
   // don't attempt to update during development
- //
-  //if (isDev) {
-   /// const message = 'update-electron-app config looks good; aborting updates since app is in development mode'
-    //opts.logger ? opts.logger.log(message) : console.log(message)
-    //return
-  //}
+ 
+  if (isDev) {
+    const message = 'update-electron-app config looks good; aborting updates since app is in development mode'
+    opts.logger ? opts.logger.log(message) : console.log(message)
+    return
+  }
   opts.electron.app.isReady()
     ? initUpdater(opts)
     : opts.electron.app.on('ready', () => initUpdater(opts))
