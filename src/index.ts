@@ -334,6 +334,7 @@ app.on('ready', () => {
     } },
     { label: 'Quit', click:  function(){
       isQuitting = true
+      quitApp()
       app.quit()
     } }
   ]);
@@ -362,20 +363,19 @@ app.on('activate', () => {
 
 });
 export function quitApp() {
-  console.log('quitting. Unsetting all windows')
-  app.removeAllListeners('window-all-closed')
+  //app.removeAllListeners('window-all-closed')
   isQuitting = true;
   if ((confirmWin !== undefined) && (confirmWin !== null)) { confirmWin.close(); confirmWin = null }
   if ((loadingWin !== undefined) && (loadingWin !== null)) { loadingWin.close(); loadingWin = null }
   if ((authWin !== undefined) && (authWin !== null)) { authWin.close(); authWin = null; }
-  if ((mainWin !== undefined) && (loadingWin !== null)) { mainWin.close(); loadingWin = null }
+  if ((mainWin !== undefined) && (loadingWin !== null)) { mainWin.close(); mainWin = null }
   if ((tray !== undefined) && (tray !== null)) { tray.destroy(); tray = null }
  
-  app.quit()
 
 }
 app.on('before-quit', function () {
   quitApp()
+  app.quit()
  
 });
 
