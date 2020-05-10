@@ -31,7 +31,6 @@ module.exports = function updater (opts: any = {}) {
     //opts.logger ? opts.logger.log(message) : console.log(message)
     //return
   //}
-  const {dialog} = opts.electron
   opts.electron.app.isReady()
     ? initUpdater(opts)
     : opts.electron.app.on('ready', () => initUpdater(opts))
