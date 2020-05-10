@@ -91,14 +91,15 @@ function initUpdater (opts: any) {
         buttons: ['Ok'],
         title: 'Match Client Update Available',
         message: process.platform === 'win32' ? releaseNotes : releaseName,
-        detail: 'A new version has been downloaded. Please close the application and restart to apply the update.'
+        detail: 'A new version has been downloaded. Please restart the application to apply.'
       }
 
       dialog.showMessageBox(dialogOpts, (response: any) => {
         if (response === 0) setImmediate(() => { 
             console.log('update dialog prompted')
             quitApp()
-            autoUpdater.quitAndInstall()
+            app.relaunch()
+            app.exit()
         })
       })
     })
