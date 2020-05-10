@@ -72,9 +72,10 @@ if (require('electron-squirrel-startup')) { // eslint-disable-line global-requir
       event.returnValue = false
     }
 });
+*/
   return mainWindow
 }
-*/
+
 
  function  createScanningWindow() {
   let loadingWin = new BrowserWindow({
