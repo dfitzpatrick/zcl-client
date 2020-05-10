@@ -3,7 +3,10 @@ const fs = require('fs').promises
 import * as path from 'path'
 import Client from './objects'
 const {dialog} = require('electron')
-require('update-electron-app')()
+const log = require('electron-log')
+console.log = log.log
+log.catchErrors()
+require('update-electron-app')({logger: require('electron-log')})
 
 let client: Client
 let confirmWin: BrowserWindow
