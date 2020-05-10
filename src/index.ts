@@ -63,6 +63,8 @@ if (require('electron-squirrel-startup')) { // eslint-disable-line global-requir
     mainWindow.hide()
   })
 
+// Remove to let autoupdater work better. Perhaps another better way to do this?
+/*
   mainWindow.on('close', function (event) {
     if (!isQuitting) {
       event.preventDefault()
@@ -72,6 +74,7 @@ if (require('electron-squirrel-startup')) { // eslint-disable-line global-requir
 });
   return mainWindow
 }
+*/
 
  function  createScanningWindow() {
   let loadingWin = new BrowserWindow({
