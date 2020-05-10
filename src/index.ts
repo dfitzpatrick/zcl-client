@@ -79,15 +79,11 @@ if (require('electron-squirrel-startup')) { // eslint-disable-line global-requir
   })
 
 // Remove to let autoupdater work better. Perhaps another better way to do this?
-/*
+
   mainWindow.on('close', function (event) {
-    if (!isQuitting) {
-      event.preventDefault()
-      mainWindow.hide()
-      event.returnValue = false
-    }
+    app.quit()
 });
-*/
+
   return mainWindow
 }
 
