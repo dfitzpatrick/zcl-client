@@ -13,7 +13,11 @@ let authWin: BrowserWindow
 let resolveLoad: any
 let resolveAuth: any
 let tray: Tray
+let isQuitting: boolean
+
 Menu.setApplicationMenu(null)
+
+
 
 
 const sleep = (ms: number) => {
@@ -21,7 +25,10 @@ const sleep = (ms: number) => {
 }
 function destroyAuthWin() {
   if (!authWin) return
-  authWin.close();
+  if ((authWin !== undefined) && (authWin !== null)) {
+    authWin.close();
+  }
+
   authWin = null;
 }
 
@@ -45,7 +52,21 @@ if (require('electron-squirrel-startup')) { // eslint-disable-line global-requir
       version: app.getVersion()
     })
 
+   
+
   })
+  mainWindow.on('minimize', (event: any) => {
+    event.preventDefault()
+    mainWindow.hide()
+  })
+
+  mainWindow.on('close', function (event) {
+    if (!isQuitting) {
+      event.preventDefault()
+      mainWindow.hide()
+      event.returnValue = false
+    }
+});
   return mainWindow
 }
 
@@ -118,10 +139,10 @@ export function createAuthWindow() {
         client.settings.save()
         await client.api.updateHeaders()
     
-        window = createMainWindow()
+        //window = createMainWindow()
         resolveAuth()
         destroyAuthWin()
-        return window
+        //return window
         
 
       } catch (err) {
@@ -146,7 +167,7 @@ async function main() {
   client = new Client()
   //client.settings.set('token', null)
   //client.settings.set('gamePath', "")
-  //client.settings.save()
+  client.settings.save()
 
 
   let gamePath = client.settings.get('gamePath')
@@ -165,6 +186,11 @@ async function main() {
     let fo = await fs.readFile(game.bankFile)
         await client.api.uploadBank(fo)
   }
+  mainWin = createMainWindow()
+  if ((authWin !== undefined)  && (authWin !== null)) {
+    authWin.close()
+  }
+
   client.linkSmurfs()
   client.syncReplays()
   console.log('starting watcher in ' + client.path)
@@ -246,7 +272,7 @@ async function authenticate() {
       const authenticated = await client.authenticate()
       if (authenticated) {
         const version = app.getVersion()
-        mainWin = createMainWindow()
+        //mainWin = createMainWindow()
         resolve()
         return mainWin
       } else {
@@ -284,10 +310,16 @@ ipcMain.on('confirmDirectory', async (event, gamePath) => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.on('ready', () => {
-  let tray = new Tray(path.join(__dirname, '../', 'src', 'assets', 'img', 'zcl.ico'))
-  const contextMenu = Menu.buildFromTemplate([
-    { label: 'Quit'},
-  ])
+  var contextMenu = Menu.buildFromTemplate([
+    { label: 'Show App', click:  function(){
+        mainWin.show();
+    } },
+    { label: 'Quit', click:  function(){
+      isQuitting = true
+      app.quit()
+    } }
+  ]);
+  tray = new Tray(path.join(__dirname, '../', 'src', 'assets', 'img', 'zcl.ico')) 
   tray.setContextMenu(contextMenu)
   main()
 
@@ -310,6 +342,9 @@ app.on('activate', () => {
   }
  
 
+});
+app.on('before-quit', function () {
+  isQuitting = true;
 });
 
 // In this file you can include the rest of your app's specific main process

@@ -14,6 +14,9 @@ const TRACKED_GAMES: string[] = [
     '1-S2-1-4632373' // ZC CE
 ];
 const fs = require('fs').promises;
+const log = require('electron-log')
+console.log = log.log
+log.catchErrors()
 
 export const http = <T>(req: RequestInfo): Promise<T> =>
   fetch(req).then((res: any) => res.json());
@@ -201,7 +204,7 @@ class Client {
     private _isGameDir(path: string) {
         return folderUpName(path).toLowerCase() == "banks";
     }
-    private _isAccountDir(path: string) {
+    private     _isAccountDir(path: string) {
         const id = path.substring(path.lastIndexOf(pathlib.sep)+1);
         const isAccount = folderUpName(pathlib.dirname(path)).toLowerCase() == 'accounts'
         const isId = (id.match(/-/g)||[]).length == 3
@@ -220,6 +223,12 @@ class Client {
         for (let g of this.games) {
             if (g.eventFile == path) { return g }
         }
+    }
+    public isBankFile(path: string) {
+        for (let g of this.games) {
+            if (g.bankFile == path) { return true }
+        }
+        return false
     }
     public trackedGames() {
         var container = [];
@@ -295,7 +304,6 @@ class Client {
         );
         watcher
         .on('change', async (path: string) => {
-            console.log('detected change')
             const game = this.gameFromEventPath(path);
             if (game) {
                 const event = await game.lastEvent()
@@ -305,15 +313,26 @@ class Client {
                 }
                 this.queue.enqueue(payload);
             }
+            if (this.isBankFile(path)) {
+                _.debounce(this.uploadBank.bind(this), 5000)(path)
+            }
         })
-        .on('add', (path: string) => {
-            
+        .on('add', async (path: string) => {
+          
             if (folderUpName(path).toLowerCase() == 'multiplayer') {
                 // ignore multiple adds for a replay as the file is still being generated.
                 _.debounce(this.newReplay.bind(this), 5000)(path);
+            } else {
+                await this.load()
+                this.linkSmurfs()
             }
         });
 
+    }
+    public async uploadBank(path: string) {
+        console.log(`Sending bank ${path}`)
+        const fo = await fs.readFile(path)
+        await this.api.uploadBank(fo) 
     }
     public async authenticate(): Promise<boolean> {
         // Get token or make sure its still valid
