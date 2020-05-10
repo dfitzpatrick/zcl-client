@@ -21,7 +21,7 @@ app.setLoginItemSettings({
 })
 
 
-require('update-electron-app')({logger: require('electron-log')})
+require('./updater')({logger: require('electron-log')})
 
 let client: Client
 let confirmWin: BrowserWindow
