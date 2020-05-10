@@ -1,3 +1,5 @@
+import { quitApp } from "./index"
+
 const assert = require('assert')
 const isURL = require('is-url')
 const isDev = require('electron-is-dev')
@@ -93,7 +95,10 @@ function initUpdater (opts: any) {
       }
 
       dialog.showMessageBox(dialogOpts, (response: any) => {
-        if (response === 0) setImmediate(() => { autoUpdater.quitAndInstall() })
+        if (response === 0) setImmediate(() => { 
+            autoUpdater.quitAndInstall() 
+            quitApp()
+        })
       })
     })
   }

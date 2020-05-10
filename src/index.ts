@@ -361,8 +361,22 @@ app.on('activate', () => {
  
 
 });
-app.on('before-quit', function () {
+export function quitApp() {
+  console.log('quitting. Unsetting all windows')
+  app.removeAllListeners('window-all-closed')
   isQuitting = true;
+  if ((confirmWin !== undefined) && (confirmWin !== null)) { confirmWin.close(); confirmWin = null }
+  if ((loadingWin !== undefined) && (loadingWin !== null)) { loadingWin.close(); loadingWin = null }
+  if ((authWin !== undefined) && (authWin !== null)) { authWin.close(); authWin = null; }
+  if ((mainWin !== undefined) && (loadingWin !== null)) { mainWin.close(); loadingWin = null }
+  if ((tray !== undefined) && (tray !== null)) { tray.destroy(); tray = null }
+ 
+  app.quit()
+
+}
+app.on('before-quit', function () {
+  quitApp()
+ 
 });
 
 // In this file you can include the rest of your app's specific main process
