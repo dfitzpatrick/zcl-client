@@ -6,6 +6,21 @@ const {dialog} = require('electron')
 const log = require('electron-log')
 console.log = log.log
 log.catchErrors()
+
+const appFolder = path.dirname(process.execPath)
+const updateExe = path.resolve(appFolder, '..', 'Update.exe')
+const exeName = path.basename(process.execPath)
+
+app.setLoginItemSettings({
+  openAtLogin: true,
+  path: updateExe,
+  args: [
+    '--processStart', `"${exeName}"`,
+    '--process-start-args', `"--hidden"`
+  ]
+})
+
+
 require('update-electron-app')({logger: require('electron-log')})
 
 let client: Client
