@@ -93,7 +93,7 @@ function initUpdater (opts: any) {
       }
 
       dialog.showMessageBox(dialogOpts, (response: any) => {
-        if (response === 0) autoUpdater.quitAndInstall()
+        if (response === 0) setImmediate(() => { autoUpdater.quitAndInstall() })
       })
     })
   }
