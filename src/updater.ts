@@ -97,9 +97,7 @@ function initUpdater (opts: any) {
       dialog.showMessageBox(dialogOpts, (response: any) => {
         if (response === 0) setImmediate(() => { 
             console.log('update dialog prompted')
-            quitApp()
-            app.relaunch()
-            app.exit()
+           autoUpdater.quitAndInstall()
         })
       })
     })

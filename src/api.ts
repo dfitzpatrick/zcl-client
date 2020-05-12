@@ -1,5 +1,6 @@
 import axios, { AxiosInstance } from 'axios'
 import Client from './objects'
+const moment = require('moment')
 
 const local = false
 console.log("Local API Set to: " + local)
@@ -128,6 +129,7 @@ export class Api {
    
         
     }
+
     public async me(): Promise<CurrentUser> {
         const response = await this.accounts.get('me', {
             headers: this.headers
@@ -137,6 +139,14 @@ export class Api {
     // ===================================
     // api endpoint api calls
     // ===================================
+    public async heartBeat() {
+        const user: User = this.client.settings.get('user')
+        const payload = JSON.stringify({client_heartbeat: moment().toISOString()})
+        await this.api.patch(`users/${user.id}`, payload, {
+            headers: this.headers,
+        })
+    }
+
     public async getReplays() {
         const response = await this.api.get('replays')
         return response.data

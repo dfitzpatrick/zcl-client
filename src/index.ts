@@ -80,7 +80,9 @@ if (require('electron-squirrel-startup')) { // eslint-disable-line global-requir
 
 // Remove to let autoupdater work better. Perhaps another better way to do this?
 
-  mainWindow.on('close', function (event) {
+  mainWindow.on('closed', () => {
+    console.log('in closed')
+    mainWindow = null
     app.quit()
 });
 
@@ -208,7 +210,7 @@ async function main() {
   if ((authWin !== undefined)  && (authWin !== null)) {
     authWin.close()
   }
-
+  client.heartBeatSchedule()
   client.linkSmurfs()
   client.syncReplays()
   console.log('starting watcher in ' + client.path)
@@ -348,6 +350,7 @@ app.on('ready', () => {
 app.on('window-all-closed', () => {
   // On OS X it is common for applications and their menu bar
   // to stay active until the user quits explicitly with Cmd + Q
+  console.log('all windows closed')
   if (process.platform !== 'darwin') {
     app.quit();
   }
@@ -374,8 +377,9 @@ export function quitApp() {
 
 }
 app.on('before-quit', function () {
-  quitApp()
-  app.quit()
+  console.log('before quit')
+  //quitApp()
+  //app.quit()
  
 });
 

@@ -239,7 +239,18 @@ class Client {
         }
         return container;
     }
-    
+    public async  heartBeatSchedule() {
+        while (true) {
+            try {
+                await this.api.heartBeat()
+                await this.sleep(5*60*1000)
+            } catch (err){
+                console.log(err)
+                console.log('error on heartbeat. Waiting 10 minutes')
+                await this.sleep(10*60*1000)
+            }
+        }
+    }
     public async detectPath(): Promise<string> {
         let root = ""
         const user = await username()
