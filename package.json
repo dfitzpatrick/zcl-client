@@ -77,7 +77,7 @@
     "@types/node": "^12.12.6",
     "@types/node-fetch": "^2.5.4",
     "@types/xmldom": "^0.1.29",
-    "axios": "^0.19.2",
+    "axios": "^0.21.1",
     "bootswatch": "^4.4.1",
     "chokidar": "^3.3.1",
     "electron-is-dev": "^1.2.0",
