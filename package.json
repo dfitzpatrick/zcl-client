@@ -90,7 +90,7 @@
     "lodash": "^4.17.15",
     "moment": "^2.24.0",
     "ms": "^2.1.2",
-    "node-fetch": "^2.6.0",
+    "node-fetch": "^3.1.1",
     "nydus": "git+https://github.com/healingbrew/nydus.git",
     "update-electron-app": "^1.5.0",
     "username": "^5.1.0",
